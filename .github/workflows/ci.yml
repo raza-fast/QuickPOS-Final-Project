@@ -80,11 +80,13 @@ jobs:
       - name: Run PHPUnit Tests
         run: |
           echo "Running tests..."
+          chmod +x vendor/bin/phpunit
           vendor/bin/phpunit tests --testdox
           echo "✅ All tests passed!"
 
       - name: Generate Test Report
         run: |
+          chmod +x vendor/bin/phpunit
           vendor/bin/phpunit tests --testdox-text test-report.txt
           echo "=== TEST REPORT ==="
           cat test-report.txt
