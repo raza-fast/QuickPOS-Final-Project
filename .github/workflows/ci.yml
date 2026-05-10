@@ -1,0 +1,114 @@
+name: QuickPOS CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ══════════════════════════════════════
+  # JOB 1: Code Quality Check
+  # ══════════════════════════════════════
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    steps:
+      # Stage 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Stage 2: Setup PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json
+          coverage: none
+
+      # Stage 3: Validate Commit Message Contains Jira ID
+      - name: Validate Commit Message
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          echo "Commit message: $COMMIT_MSG"
+          if [[ "$COMMIT_MSG" =~ \[POS-[0-9]+\] ]]; then
+            echo "✅ Commit message contains valid Jira ticket ID"
+          else
+            echo "❌ ERROR: Commit message must contain Jira ticket ID like [POS-101]"
+            exit 1
+          fi
+
+      # Stage 4: PHP Syntax Check
+      - name: PHP Syntax Check
+        run: |
+          echo "Running PHP syntax check..."
+          find . -name "*.php" \
+            -not -path "./vendor/*" \
+            -exec php -l {} \;
+          echo "✅ All PHP files passed syntax check"
+
+      # Stage 5: Upload Code as Artifact
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: quickpos-build
+          path: |
+            index.php
+            contact.php
+            thankyou.php
+            css/
+            js/
+            tests/
+
+  # ══════════════════════════════════════
+  # JOB 2: Automated Testing
+  # ══════════════════════════════════════
+  automated-tests:
+    name: Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      # Stage 1: Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Stage 2: Setup PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json
+          coverage: none
+
+      # Stage 3: Install Composer Dependencies
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      # Stage 4: Run PHPUnit Tests
+      - name: Run Automated Tests
+        run: |
+          echo "Running PHPUnit tests..."
+          vendor/bin/phpunit tests --testdox
+          echo "✅ All tests passed!"
+
+      # Stage 5: Generate Test Report
+      - name: Generate Test Report
+        run: |
+          vendor/bin/phpunit tests \
+            --testdox-text test-report.txt
+          echo "Test Report:"
+          cat test-report.txt
+
+      # Stage 6: Upload Test Report
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-report
+          path: test-report.txt
