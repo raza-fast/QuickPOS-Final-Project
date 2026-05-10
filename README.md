@@ -1,6 +1,6 @@
 # QuickPOS Landing Page
 
-![CI/CD Pipeline](https://github.com/raza-fast/QuickPOS-Final-Project/actions/workflows/ci.yml/badge.svg)
+![CI/CD Pipeline](https://github.com/raza-fast/QuickPOS-Final-Project/actions/workflows/ci.yml/badge.svg?branch=feature/testing)
 
 A professional landing page for the QuickPOS Point of Sale system.
 

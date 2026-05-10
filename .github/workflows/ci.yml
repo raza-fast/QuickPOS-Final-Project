@@ -32,12 +32,17 @@ jobs:
 
       - name: Validate Commit Message Has Jira ID
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          echo "Commit message: $COMMIT_MSG"
+          # Check both PR title and commit message
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMIT_MSG="${{ github.event.pull_request.title }}"
+          else
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+          fi
+          echo "Checking: $COMMIT_MSG"
           if echo "$COMMIT_MSG" | grep -qE '\[POS-[0-9]+\]'; then
             echo "✅ Valid Jira ticket ID found"
           else
-            echo "❌ Commit must contain Jira ID like [POS-101]"
+            echo "❌ Must contain Jira ID like [POS-101]"
             exit 1
           fi
 
