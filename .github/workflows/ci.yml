@@ -13,19 +13,16 @@ on:
       - develop
 
 jobs:
-  # ══════════════════════════════════════
-  # JOB 1: Code Quality Check
-  # ══════════════════════════════════════
   code-quality:
     name: Code Quality Check
     runs-on: ubuntu-latest
-
     steps:
-      # Stage 1: Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      # Stage 2: Setup PHP
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -33,30 +30,25 @@ jobs:
           extensions: mbstring, xml, ctype, json
           coverage: none
 
-      # Stage 3: Validate Commit Message Contains Jira ID
-      - name: Validate Commit Message
+      - name: Validate Commit Message Has Jira ID
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_MSG=$(git log -1 --pretty=%B)
           echo "Commit message: $COMMIT_MSG"
-          if [[ "$COMMIT_MSG" =~ \[POS-[0-9]+\] ]]; then
-            echo "✅ Commit message contains valid Jira ticket ID"
+          if echo "$COMMIT_MSG" | grep -qE '\[POS-[0-9]+\]'; then
+            echo "✅ Valid Jira ticket ID found"
           else
-            echo "❌ ERROR: Commit message must contain Jira ticket ID like [POS-101]"
+            echo "❌ Commit must contain Jira ID like [POS-101]"
             exit 1
           fi
 
-      # Stage 4: PHP Syntax Check
       - name: PHP Syntax Check
         run: |
-          echo "Running PHP syntax check..."
-          find . -name "*.php" \
-            -not -path "./vendor/*" \
-            -exec php -l {} \;
-          echo "✅ All PHP files passed syntax check"
+          echo "Checking PHP syntax..."
+          find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \;
+          echo "✅ Syntax check passed"
 
-      # Stage 5: Upload Code as Artifact
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: quickpos-build
           path: |
@@ -67,19 +59,14 @@ jobs:
             js/
             tests/
 
-  # ══════════════════════════════════════
-  # JOB 2: Automated Testing
-  # ══════════════════════════════════════
   automated-tests:
     name: Automated Tests
     runs-on: ubuntu-latest
-
     steps:
-      # Stage 1: Checkout Code
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      # Stage 2: Setup PHP
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -87,28 +74,23 @@ jobs:
           extensions: mbstring, xml, ctype, json
           coverage: none
 
-      # Stage 3: Install Composer Dependencies
-      - name: Install Dependencies
+      - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-progress
 
-      # Stage 4: Run PHPUnit Tests
-      - name: Run Automated Tests
+      - name: Run PHPUnit Tests
         run: |
-          echo "Running PHPUnit tests..."
+          echo "Running tests..."
           vendor/bin/phpunit tests --testdox
           echo "✅ All tests passed!"
 
-      # Stage 5: Generate Test Report
       - name: Generate Test Report
         run: |
-          vendor/bin/phpunit tests \
-            --testdox-text test-report.txt
-          echo "Test Report:"
+          vendor/bin/phpunit tests --testdox-text test-report.txt
+          echo "=== TEST REPORT ==="
           cat test-report.txt
 
-      # Stage 6: Upload Test Report
       - name: Upload Test Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-report
           path: test-report.txt
