@@ -1,0 +1,29 @@
+# Composer
+/vendor/
+
+# Environment
+.env
+.env.*
+
+# PHPUnit
+.phpunit.result.cache
+
+# Node
+node_modules/
+
+# Logs
+*.log
+npm-debug.log
+
+# IDEs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build / caches
+.cache/
+
+# Other
+*.bak
+*.swp
