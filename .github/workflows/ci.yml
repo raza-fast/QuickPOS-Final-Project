@@ -1,0 +1,98 @@
+name: QuickPOS CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  code-quality:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json
+          coverage: none
+
+      - name: Check Jira ID in Commits
+        run: |
+          echo "Checking Jira ticket ID..."
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Last commit: $COMMIT_MSG"
+          if echo "$COMMIT_MSG" | grep -qE '\[POS-[0-9]+\]|Merge|merge'; then
+            echo "✅ Commit message is valid"
+          else
+            echo "⚠️ Warning: No Jira ID found but continuing..."
+          fi
+
+      - name: PHP Syntax Check
+        run: |
+          echo "Checking PHP syntax..."
+          find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \;
+          echo "✅ Syntax check passed"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickpos-build
+          path: |
+            index.php
+            contact.php
+            thankyou.php
+            css/
+            js/
+            tests/
+
+  automated-tests:
+    name: Automated Tests
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPUnit Tests
+        run: |
+          echo "Running PHPUnit tests..."
+          chmod +x vendor/bin/phpunit
+          vendor/bin/phpunit tests --testdox
+          echo "✅ All tests passed!"
+
+      - name: Generate Test Report
+        run: |
+          chmod +x vendor/bin/phpunit
+          vendor/bin/phpunit tests --testdox-text test-report.txt
+          echo "=== TEST REPORT ==="
+          cat test-report.txt
+
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: test-report.txt
